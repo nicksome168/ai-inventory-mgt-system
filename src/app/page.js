@@ -36,9 +36,13 @@ export default function Home() {
   const [inventory, setInventory] = useState([])
   const [open, setOpen] = useState(false)
   const [itemName, setItemName] = useState('')
+  const [queryKey, setQueryKey] = useState('')
   
   const addItem = async (item) => {
-    const docRef = doc(collection(firestore, 'pantry'), item)
+    if (item === '') {
+      return
+    }
+    const docRef = doc(collection(firestore, 'pantry'), item.trim())
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
       const { quantity } = docSnap.data()
@@ -63,6 +67,12 @@ export default function Home() {
     await updateInventory()
   }
   
+  const searchFilter = (array) => {
+    return array.filter(
+      (item) => item.name.toLowerCase().includes(queryKey.toLowerCase())
+    )
+  }
+  
   const updateInventory = async () => {
     const snapshot = query(collection(firestore, 'pantry'))
     const docs = await getDocs(snapshot)
@@ -70,12 +80,14 @@ export default function Home() {
     docs.forEach((doc) => {
       inventoryList.push({ name: doc.id, ...doc.data() })
     })
-    setInventory(inventoryList)
+    const filtered = searchFilter(inventoryList)
+    console.log(filtered)
+    setInventory(filtered)
   }
   
   useEffect(() => {
     updateInventory()
-  }, [])
+  }, [queryKey])
   
   return (
     <Box
@@ -122,6 +134,13 @@ export default function Home() {
       <Button variant="contained" onClick={handleOpen}>
         Add New Item
       </Button>
+      <TextField
+        id="outlined-basic"
+        label="Search"
+        variant="outlined"
+        value={queryKey}
+        onChange={(e) => setQueryKey(e.target.value)}
+      />
       <Box border={'1px solid #333'}>
         <Box
           width="800px"
