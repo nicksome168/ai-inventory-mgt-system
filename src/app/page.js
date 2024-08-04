@@ -12,6 +12,7 @@ import {
   deleteDoc,
   getDoc,
 } from 'firebase/firestore'
+import { CameraComponent } from '@/app/components/camera'
 
 const style = {
   position: 'absolute',
@@ -32,17 +33,27 @@ export default function Home() {
   // We'll add our component logic here
   const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
-
+  const handleTakePhoto = () => setCameraOpen(true)
+  const handleCameraClose = () => setCameraOpen(false)
+  
   const [inventory, setInventory] = useState([])
   const [open, setOpen] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const [itemName, setItemName] = useState('')
   const [queryKey, setQueryKey] = useState('')
-  
+  const [detectedObject, setDetectedObject] = useState(null)
+
+  const handleDetectedObject = (object) => {
+    console.log(object)
+    setDetectedObject(object)
+    setItemName(object.name)
+  }
+
   const addItem = async (item) => {
     if (item === '') {
       return
     }
-    const docRef = doc(collection(firestore, 'pantry'), item.trim())
+    const docRef = doc(collection(firestore, 'pantry'), item.trim().toLowerCase())
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
       const { quantity } = docSnap.data()
@@ -69,7 +80,7 @@ export default function Home() {
   
   const searchFilter = (array) => {
     return array.filter(
-      (item) => item.name.toLowerCase().includes(queryKey.toLowerCase())
+      (item) => item.name.toLowerCase().includes(queryKey.trim().toLowerCase())
     )
   }
   
@@ -81,7 +92,6 @@ export default function Home() {
       inventoryList.push({ name: doc.id, ...doc.data() })
     })
     const filtered = searchFilter(inventoryList)
-    console.log(filtered)
     setInventory(filtered)
   }
   
@@ -134,6 +144,43 @@ export default function Home() {
       <Button variant="contained" onClick={handleOpen}>
         Add New Item
       </Button>
+      <Button variant="contained" onClick={handleTakePhoto}>
+        Take Photo
+      </Button>
+      <Modal
+        open={cameraOpen}
+        onClose={handleCameraClose}
+      >
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            width: '100%', 
+            height: '100%', 
+            boxShadow: 24, 
+            p: 4 
+          }}
+        >
+          <CameraComponent onDetectedObject={handleDetectedObject} />
+          <Button variant="contained" onClick={handleCameraClose}>
+            Close
+          </Button>
+          {detectedObject && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                addItem(detectedObject)
+                setDetectedObject(null)
+                handleCameraClose()
+                setItemName('')
+              }}  
+            >
+              Add Detected Item
+            </Button>
+          )}
+        </Box>
+      </Modal>
       <TextField
         id="outlined-basic"
         label="Search"
